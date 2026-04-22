@@ -401,6 +401,31 @@ function html() {
         cursor: pointer;
         text-align: left;
       }
+      .watch-chip-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .watch-chip-tools {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .watch-chip-tool {
+        border: 0;
+        background: rgba(110, 73, 53, 0.08);
+        color: var(--muted);
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .watch-chip-tool:hover {
+        background: rgba(162, 73, 47, 0.12);
+        color: var(--accent-deep);
+      }
       .watch-chip.active {
         background: linear-gradient(180deg, rgba(162, 73, 47, 0.12), rgba(162, 73, 47, 0.04));
         border-color: rgba(162, 73, 47, 0.28);
@@ -416,6 +441,9 @@ function html() {
         text-transform: uppercase;
         color: var(--muted);
         margin-bottom: 3px;
+      }
+      .watch-chip.active strong {
+        color: var(--accent-deep);
       }
       .grid {
         display: grid;
@@ -875,6 +903,23 @@ function html() {
         localStorage.setItem(WATCHLIST_KEY, JSON.stringify(items));
       }
 
+      function syncCompareInputs(items) {
+        const aInput = document.getElementById("compare-a");
+        const bInput = document.getElementById("compare-b");
+        if (!aInput || !bInput) return;
+        const currentA = aInput.value.trim();
+        const currentB = bInput.value.trim();
+        const hasA = items.some((item) => item.address.toLowerCase() === currentA.toLowerCase());
+        const hasB = items.some((item) => item.address.toLowerCase() === currentB.toLowerCase());
+
+        if (!hasA) {
+          aInput.value = items[0]?.address || "";
+        }
+        if (!hasB) {
+          bInput.value = items[1]?.address || items[0]?.address || "";
+        }
+      }
+
       function renderWatchlist(activeAddress) {
         const root = document.getElementById("watchlist");
         const meta = document.getElementById("watchlist-meta");
@@ -882,10 +927,17 @@ function html() {
         meta.textContent = items.length + " saved wallets ready for operator triage.";
         root.innerHTML = items.map((item, index) =>
           "<button class='watch-chip " + (item.address === activeAddress ? "active" : "") + "' onclick=\"selectWatch('" + item.address + "')\">" +
-            "<strong>" + item.label + "</strong>" +
+            "<div class='watch-chip-head'>" +
+              "<strong>" + item.label + "</strong>" +
+              "<div class='watch-chip-tools'>" +
+                "<button class='watch-chip-tool' onclick='event.stopPropagation(); renameWatchItem(" + index + ")' title='Rename watchlist item'>✎</button>" +
+                "<button class='watch-chip-tool' onclick='event.stopPropagation(); removeWatchItem(" + index + ")' title='Remove watchlist item'>×</button>" +
+              "</div>" +
+            "</div>" +
             "<div class='sub'>" + item.address.slice(0, 10) + "...</div>" +
           "</button>"
         ).join("");
+        syncCompareInputs(items);
       }
 
       function addCurrentWalletToWatchlist() {
@@ -907,9 +959,51 @@ function html() {
         setTimeout(() => showStatus("", ""), 1500);
       }
 
+      function renameWatchItem(index) {
+        const items = getWatchlist();
+        const current = items[index];
+        if (!current) return;
+        const nextLabel = window.prompt("Rename this watchlist item", current.label);
+        if (!nextLabel) return;
+        current.label = nextLabel.trim() || current.label;
+        saveWatchlist(items);
+        renderWatchlist(document.getElementById("wallet").value.trim());
+        showStatus("Watchlist label updated.", "loading");
+        setTimeout(() => showStatus("", ""), 1200);
+      }
+
+      function removeWatchItem(index) {
+        const items = getWatchlist();
+        if (items.length <= 1) {
+          showStatus("Keep at least one wallet in watchlist.", "error");
+          setTimeout(() => showStatus("", ""), 1600);
+          return;
+        }
+        const current = items[index];
+        if (!current) return;
+        const ok = window.confirm("Remove " + current.label + " from watchlist?");
+        if (!ok) return;
+        items.splice(index, 1);
+        saveWatchlist(items);
+        const activeWallet = document.getElementById("wallet").value.trim();
+        const nextActive = activeWallet.toLowerCase() === current.address.toLowerCase()
+          ? items[0]?.address || DEFAULT_WALLET
+          : activeWallet;
+        renderWatchlist(nextActive);
+        if (nextActive && nextActive !== activeWallet) {
+          document.getElementById("wallet").value = nextActive;
+          loadWallet();
+        } else {
+          loadCompare();
+        }
+        showStatus("Wallet removed from watchlist.", "loading");
+        setTimeout(() => showStatus("", ""), 1200);
+      }
+
       function resetWatchlist() {
         saveWatchlist(DEFAULT_WATCHLIST);
-        renderWatchlist(document.getElementById("wallet").value.trim());
+        renderWatchlist(document.getElementById("wallet").value.trim() || DEFAULT_WALLET);
+        loadCompare();
         showStatus("Watchlist reset to default examples.", "loading");
         setTimeout(() => showStatus("", ""), 1500);
       }
