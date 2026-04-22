@@ -1,0 +1,13 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "dexy-prototype",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-04-22",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "dex.elechimp.xyz/*",
+      "zone_name": "elechimp.xyz"
+    }
+  ]
+}

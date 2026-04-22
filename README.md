@@ -117,3 +117,16 @@ This repo started as a strategy/investor-materials repo. The codebase now includ
 For the tactical build order, see:
 
 - `docs/06-Engineering-Roadmap.md`
+
+## Cloudflare Prototype
+
+A Cloudflare Worker prototype is included for fast public deployment without
+depending on Python Workers beta toolchains:
+
+- `cloudflare/worker.js`
+- `cloudflare/wrangler.jsonc`
+
+This Worker serves:
+
+- `/` — public prototype UI
+- `/api/wallet?address=...` — wallet summary from Hyperliquid public data
