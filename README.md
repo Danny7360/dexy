@@ -57,3 +57,61 @@ Dexy should start as:
 - Hyperliquid-first
 - Telegram-first / dashboard-second
 - API / MCP / x402 later
+# Dexy
+
+Dexy is a Hyperliquid-first wallet risk attribution and event alert layer.
+
+The product direction is intentionally narrow:
+
+- human operator first
+- read-only and non-custodial
+- focused on wallet-level risk, cost drag, and attribution
+- not a signal-selling product
+- not a copy-trading or execution product
+
+## Repository Structure
+
+- `docs/`: whitepaper, business plan, deck copy, appendices
+- `deck/`: editable investor deck assets
+- `src/dexy/`: API and MVP application code
+- `tests/`: API smoke tests
+
+## MVP Scope
+
+The MVP is a backend service that answers one question well:
+
+> For a wallet on Hyperliquid, what is the most dangerous open exposure right now, and what is currently eating into PnL?
+
+## Quick Start
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn dexy.main:app --reload
+```
+
+Then open:
+
+- `http://127.0.0.1:8000/healthz`
+- `http://127.0.0.1:8000/v1/wallets/0xfe35dfb17f226a61d1f8f318990e6d27944d6002/summary`
+
+## Current State
+
+This repo started as a strategy/investor-materials repo. The codebase now includes:
+
+- a FastAPI API skeleton
+- domain models for positions, risk, costs, and attribution
+- a placeholder Hyperliquid adapter using deterministic demo data
+- a wallet summary endpoint for frontend and bot integration
+
+## What Comes Next
+
+1. Replace demo snapshots with real Hyperliquid reads
+2. Add Telegram alerting
+3. Add replay/timeline support
+4. Add a minimal dashboard
+
+For the tactical build order, see:
+
+- `docs/06-Engineering-Roadmap.md`
