@@ -57,3 +57,4 @@ class WalletSummary(BaseModel):
     risk: RiskSummary
     costs: CostBreakdown
     attribution: AttributionSummary
+    operator_summary: str

@@ -95,6 +95,7 @@ Then open:
 
 - `http://127.0.0.1:8000/healthz`
 - `http://127.0.0.1:8000/v1/wallets/0xfe35dfb17f226a61d1f8f318990e6d27944d6002/summary`
+- `http://127.0.0.1:8000/prototype`
 
 ## Current State
 
@@ -102,8 +103,9 @@ This repo started as a strategy/investor-materials repo. The codebase now includ
 
 - a FastAPI API skeleton
 - domain models for positions, risk, costs, and attribution
-- a placeholder Hyperliquid adapter using deterministic demo data
+- a Hyperliquid live adapter with demo fallback
 - a wallet summary endpoint for frontend and bot integration
+- a low-fidelity prototype page for wallet-level operator monitoring
 
 ## What Comes Next
 

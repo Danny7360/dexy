@@ -2,6 +2,7 @@ from typing import Optional
 
 from dexy.adapters.hyperliquid import HyperliquidAdapter
 from dexy.domain.models import WalletSummary
+from dexy.services.explainer import build_operator_summary
 from dexy.services.attribution import build_attribution_summary, build_cost_breakdown
 from dexy.services.risk import build_risk_summary
 
@@ -15,6 +16,7 @@ class WalletSummaryUseCase:
         risk = build_risk_summary(snapshot)
         costs = build_cost_breakdown(snapshot)
         attribution = build_attribution_summary(snapshot, costs)
+        operator_summary = build_operator_summary(risk, attribution)
 
         return WalletSummary(
             wallet_address=snapshot.wallet_address,
@@ -23,4 +25,5 @@ class WalletSummaryUseCase:
             risk=risk,
             costs=costs,
             attribution=attribution,
+            operator_summary=operator_summary,
         )

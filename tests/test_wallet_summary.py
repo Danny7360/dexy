@@ -16,3 +16,4 @@ def test_wallet_summary_contains_risk_and_attribution() -> None:
     assert data["risk"]["most_at_risk_asset"] == "SP500"
     assert "Funding" in data["costs"]["top_cost_driver"] or "Fees" in data["costs"]["top_cost_driver"]
     assert data["attribution"]["one_line_summary"]
+    assert data["operator_summary"]
