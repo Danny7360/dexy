@@ -150,66 +150,290 @@ function html() {
     <title>Dexy Prototype</title>
     <style>
       :root {
-        color-scheme: dark;
-        --bg: #0a0d12;
-        --panel: #121923;
-        --muted: #90a3b9;
-        --text: #eef5ff;
-        --accent: #60d394;
-        --danger: #ff7a7a;
-        --warning: #ffbd59;
-        --border: #223045;
+        color-scheme: light;
+        --bg: #f3eadf;
+        --bg-soft: #f8f1e7;
+        --panel: rgba(255, 250, 244, 0.84);
+        --panel-strong: #fff8ef;
+        --text: #241712;
+        --muted: #7f6758;
+        --accent: #a2492f;
+        --accent-deep: #6f2915;
+        --warm: #c28a45;
+        --line: rgba(110, 73, 53, 0.16);
+        --shadow: 0 20px 60px rgba(88, 53, 33, 0.08);
+        --danger: #b1412e;
+        --warning: #b97a2d;
+        --good: #7b5630;
       }
       body {
         margin: 0;
-        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: linear-gradient(180deg, #0a0d12 0%, #0f1520 100%);
+        font-family: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(162, 73, 47, 0.14), transparent 28%),
+          radial-gradient(circle at 85% 20%, rgba(194, 138, 69, 0.12), transparent 24%),
+          linear-gradient(180deg, #f7efe4 0%, #f0e4d6 100%);
         color: var(--text);
       }
       .wrap {
-        max-width: 1100px;
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 40px 20px 80px;
+        padding: 36px 20px 88px;
       }
-      .hero h1 { margin: 0 0 8px; font-size: 32px; }
-      .hero p { margin: 0; color: var(--muted); max-width: 760px; line-height: 1.55; }
-      .input-row { display: flex; gap: 12px; margin: 24px 0; }
+      .hero-shell {
+        display: grid;
+        grid-template-columns: 1.55fr 0.95fr;
+        gap: 18px;
+        align-items: stretch;
+        margin-bottom: 22px;
+      }
+      .hero-card,
+      .note-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+      .hero-card {
+        padding: 30px 30px 26px;
+      }
+      .note-card {
+        padding: 22px 22px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(162, 73, 47, 0.08);
+        color: var(--accent-deep);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .hero h1 {
+        margin: 18px 0 12px;
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+        font-size: 48px;
+        line-height: 0.96;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 720px;
+        line-height: 1.62;
+        font-size: 16px;
+      }
+      .hero-grid {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .hero-stat {
+        padding: 14px 14px 15px;
+        border-radius: 18px;
+        background: rgba(255, 248, 239, 0.78);
+        border: 1px solid rgba(110, 73, 53, 0.1);
+      }
+      .hero-stat .kicker {
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+      }
+      .hero-stat .big {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--accent-deep);
+      }
+      .note-card h2 {
+        margin: 0 0 14px;
+        font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+        font-size: 28px;
+        line-height: 1.02;
+      }
+      .note-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.62;
+      }
+      .note-card ul {
+        margin: 18px 0 0;
+        padding-left: 18px;
+        color: var(--text);
+        line-height: 1.8;
+      }
+      .input-row {
+        display: flex;
+        gap: 12px;
+        margin: 0 0 22px;
+      }
       input {
-        flex: 1; background: var(--panel); border: 1px solid var(--border); color: var(--text);
-        padding: 14px 16px; border-radius: 14px; font-size: 15px;
+        flex: 1;
+        background: rgba(255, 250, 244, 0.92);
+        border: 1px solid var(--line);
+        color: var(--text);
+        padding: 16px 18px;
+        border-radius: 18px;
+        font-size: 15px;
+        box-shadow: var(--shadow);
       }
+      input:focus { outline: 2px solid rgba(162, 73, 47, 0.18); outline-offset: 1px; }
       button {
-        background: var(--text); color: #0d131c; border: none; padding: 14px 18px;
-        border-radius: 14px; font-weight: 700; cursor: pointer;
+        background: linear-gradient(180deg, #a2492f 0%, #8f3922 100%);
+        color: #fff8f0;
+        border: none;
+        padding: 16px 20px;
+        border-radius: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 12px 32px rgba(143, 57, 34, 0.24);
       }
-      .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
-      .card { background: rgba(18, 25, 35, 0.92); border: 1px solid var(--border); border-radius: 18px; padding: 18px; }
-      .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-      .value { font-size: 28px; font-weight: 800; }
-      .good { color: var(--accent); } .bad { color: var(--danger); } .warn { color: var(--warning); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 18px 18px 20px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+      .label {
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 12px;
+      }
+      .value {
+        font-family: "SF Pro Display", "Inter", sans-serif;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+      .good { color: var(--good); }
+      .bad { color: var(--danger); }
+      .warn { color: var(--warning); }
       .full { grid-column: 1 / -1; }
-      .summary { font-size: 18px; line-height: 1.6; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); }
-      th { color: var(--muted); font-size: 12px; text-transform: uppercase; }
-      .footer { color: var(--muted); margin-top: 18px; font-size: 13px; }
-      @media (max-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
-      @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } .input-row { flex-direction: column; } }
+      .summary {
+        font-size: 18px;
+        line-height: 1.65;
+        color: #35231a;
+        max-width: 960px;
+      }
+      .card.note-band {
+        background: linear-gradient(135deg, rgba(162, 73, 47, 0.06), rgba(194, 138, 69, 0.08));
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 15px;
+      }
+      th, td {
+        text-align: left;
+        padding: 14px 10px;
+        border-bottom: 1px solid rgba(110, 73, 53, 0.12);
+      }
+      th {
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      tbody tr:hover {
+        background: rgba(162, 73, 47, 0.04);
+      }
+      .footer {
+        color: var(--muted);
+        margin-top: 18px;
+        font-size: 13px;
+      }
+      @media (max-width: 980px) {
+        .hero-shell,
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .hero-card {
+          grid-column: 1 / -1;
+        }
+      }
+      @media (max-width: 640px) {
+        .hero-shell,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .hero h1 {
+          font-size: 40px;
+        }
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+        .input-row {
+          flex-direction: column;
+        }
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <div class="hero">
-        <h1>Dexy Prototype</h1>
-        <p>
-          Hyperliquid-first wallet risk attribution and event alert layer.
-          This prototype focuses on the first operator question: which open position is most dangerous right now, and what is eating into PnL?
-        </p>
+      <div class="hero-shell">
+        <div class="hero hero-card">
+          <div class="eyebrow">Hyperliquid-first operator console</div>
+          <h1>Know which position can hurt you first.</h1>
+          <p>
+            Dexy turns public but hard-to-read wallet exposure into an operator-grade readout:
+            what is most dangerous right now, what is quietly draining returns, and what deserves attention before the next move.
+          </p>
+          <div class="hero-grid">
+            <div class="hero-stat">
+              <div class="kicker">Primary use</div>
+              <div class="big">Risk triage</div>
+            </div>
+            <div class="hero-stat">
+              <div class="kicker">Secondary use</div>
+              <div class="big">PnL attribution</div>
+            </div>
+            <div class="hero-stat">
+              <div class="kicker">Surface</div>
+              <div class="big">Wallet-first</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="note-card">
+          <div>
+            <h2>Built for people already in the market.</h2>
+            <p>
+              Not a signal feed. Not a copy-trading toy. This prototype answers the operator question:
+              “What should I look at first before this position becomes expensive?”
+            </p>
+          </div>
+          <ul>
+            <li>Wallet-level risk ranking</li>
+            <li>Funding and carry drag visibility</li>
+            <li>Action-first summary, not raw dashboards</li>
+          </ul>
+        </div>
       </div>
 
       <div class="input-row">
         <input id="wallet" value="${DEFAULT_WALLET}" />
-        <button onclick="loadWallet()">Load wallet</button>
+        <button onclick="loadWallet()">Inspect wallet</button>
       </div>
 
       <div class="grid">
@@ -217,7 +441,7 @@ function html() {
         <div class="card"><div class="label">Risk Score</div><div id="risk-score" class="value">-</div></div>
         <div class="card"><div class="label">Most At Risk</div><div id="risk-asset" class="value">-</div></div>
         <div class="card"><div class="label">Top Cost Driver</div><div id="cost-driver" class="value">-</div></div>
-        <div class="card full"><div class="label">Operator Summary</div><div id="operator-summary" class="summary">Loading...</div></div>
+        <div class="card full note-band"><div class="label">Operator Summary</div><div id="operator-summary" class="summary">Loading...</div></div>
         <div class="card"><div class="label">Unrealized PnL</div><div id="unrealized-pnl" class="value">-</div></div>
         <div class="card"><div class="label">Funding Drag</div><div id="funding-drag" class="value">-</div></div>
         <div class="card"><div class="label">Primary Driver</div><div id="primary-driver" class="value">-</div></div>
