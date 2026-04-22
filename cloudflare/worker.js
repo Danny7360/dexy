@@ -374,6 +374,18 @@ function html() {
         gap: 10px;
         margin: 0 0 20px;
       }
+      .watchlist-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin: 8px 0 14px;
+      }
+      .watchlist-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
       .watch-chip {
         border: 1px solid rgba(110, 73, 53, 0.14);
         background: rgba(255, 248, 239, 0.8);
@@ -382,6 +394,15 @@ function html() {
         border-radius: 999px;
         font-size: 13px;
         cursor: pointer;
+        text-align: left;
+      }
+      .watch-chip.active {
+        background: linear-gradient(180deg, rgba(162, 73, 47, 0.12), rgba(162, 73, 47, 0.04));
+        border-color: rgba(162, 73, 47, 0.28);
+      }
+      .watch-chip .sub {
+        color: var(--muted);
+        font-size: 12px;
       }
       .watch-chip strong {
         display: block;
@@ -446,8 +467,43 @@ function html() {
         color: var(--muted);
         max-width: 700px;
       }
+      .status-banner {
+        display: none;
+        margin: 0 0 16px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(110, 73, 53, 0.12);
+        background: rgba(255, 248, 239, 0.7);
+        color: var(--muted);
+      }
+      .status-banner.error {
+        display: block;
+        background: rgba(177, 65, 46, 0.08);
+        color: var(--danger);
+      }
+      .status-banner.loading {
+        display: block;
+        color: var(--accent-deep);
+      }
       .card.note-band {
         background: linear-gradient(135deg, rgba(162, 73, 47, 0.06), rgba(194, 138, 69, 0.08));
+      }
+      .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .settings-grid label {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+      }
+      .settings-grid input {
+        width: 100%;
+        box-sizing: border-box;
       }
       .alert-list {
         display: grid;
@@ -484,6 +540,11 @@ function html() {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 16px;
+      }
+      .compare-summary {
+        margin-top: 12px;
+        color: var(--muted);
+        line-height: 1.65;
       }
       .compare-card {
         background: rgba(255, 248, 239, 0.72);
@@ -566,6 +627,7 @@ function html() {
         .grid,
         .compare-grid,
         .narrative-grid,
+        .settings-grid,
         .alert-list {
           grid-template-columns: 1fr 1fr;
         }
@@ -578,6 +640,7 @@ function html() {
         .grid,
         .compare-grid,
         .narrative-grid,
+        .settings-grid,
         .alert-list {
           grid-template-columns: 1fr;
         }
@@ -638,16 +701,18 @@ function html() {
       <div class="input-row">
         <input id="wallet" value="${DEFAULT_WALLET}" />
         <button onclick="loadWallet()">Inspect wallet</button>
+        <button class="ghost-btn" onclick="addCurrentWalletToWatchlist()">Save wallet</button>
       </div>
 
-      <div class="watchlist">
-        ${WATCHLIST.map(
-          (item) => `<button class="watch-chip" onclick="selectWatch('${item.address}')"><strong>${item.label}</strong>${item.address.slice(
-            0,
-            10,
-          )}...</button>`,
-        ).join("")}
+      <div class="status-banner" id="status-banner"></div>
+
+      <div class="watchlist-toolbar">
+        <div class="label" style="margin: 0;">Watchlist</div>
+        <div class="watchlist-actions">
+          <button class="ghost-btn" onclick="resetWatchlist()">Reset defaults</button>
+        </div>
       </div>
+      <div class="watchlist" id="watchlist"></div>
 
       <div class="grid">
         <div class="card"><div class="label">Risk Level</div><div id="risk-level" class="value warn">-</div></div>
@@ -673,6 +738,23 @@ function html() {
         <h3>Alert State</h3>
         <p>Not another noisy dashboard. These are the operator-grade reasons this wallet deserves attention right now.</p>
       </div>
+      <div class="card" style="margin-bottom: 14px;">
+        <div class="label">Alert Thresholds</div>
+        <div class="settings-grid">
+          <div>
+            <label for="setting-liq">Liquidation distance %</label>
+            <input id="setting-liq" type="number" min="1" step="1" />
+          </div>
+          <div>
+            <label for="setting-funding">Funding drag USD</label>
+            <input id="setting-funding" type="number" min="100" step="100" />
+          </div>
+          <div>
+            <label for="setting-risk">Risk score</label>
+            <input id="setting-risk" type="number" min="1" max="100" step="1" />
+          </div>
+        </div>
+      </div>
       <div class="alert-list" id="alerts"></div>
 
       <div class="section-head">
@@ -685,6 +767,7 @@ function html() {
         <button class="ghost-btn" onclick="loadCompare()">Compare wallets</button>
       </div>
       <div class="compare-grid" id="compare"></div>
+      <div class="compare-summary" id="compare-summary"></div>
 
       <div class="section-head">
         <h3>Investor Demo Narrative</h3>
@@ -728,49 +811,206 @@ function html() {
       </div>
     </div>
     <script>
+      const DEFAULT_WATCHLIST = ${JSON.stringify(WATCHLIST)};
+      const WATCHLIST_KEY = "dexy.watchlist.v1";
+      const SETTINGS_KEY = "dexy.alertSettings.v1";
+      const DEFAULT_ALERT_SETTINGS = {
+        liqThreshold: 25,
+        fundingThreshold: 5000,
+        riskThreshold: 60,
+      };
+
       function watchButtonHtml(label, value, cls) {
         return "<div class='compare-pill'><div class='k'>" + label + "</div><div class='v " + (cls || "") + "'>" + value + "</div></div>";
       }
+
+      function showStatus(message, type) {
+        const el = document.getElementById("status-banner");
+        el.textContent = message || "";
+        el.className = "status-banner" + (type ? " " + type : "");
+        if (!message) {
+          el.style.display = "none";
+        } else {
+          el.style.display = "block";
+        }
+      }
+
       function setText(id, value, cls) {
         const el = document.getElementById(id);
         el.textContent = value;
         if (cls) el.className = "value " + cls;
       }
 
+      function getWatchlist() {
+        try {
+          const stored = localStorage.getItem(WATCHLIST_KEY);
+          if (!stored) return DEFAULT_WATCHLIST;
+          const parsed = JSON.parse(stored);
+          return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_WATCHLIST;
+        } catch {
+          return DEFAULT_WATCHLIST;
+        }
+      }
+
+      function saveWatchlist(items) {
+        localStorage.setItem(WATCHLIST_KEY, JSON.stringify(items));
+      }
+
+      function renderWatchlist(activeAddress) {
+        const root = document.getElementById("watchlist");
+        const items = getWatchlist();
+        root.innerHTML = items.map((item, index) =>
+          "<button class='watch-chip " + (item.address === activeAddress ? "active" : "") + "' onclick=\"selectWatch('" + item.address + "')\">" +
+            "<strong>" + item.label + "</strong>" +
+            "<div class='sub'>" + item.address.slice(0, 10) + "...</div>" +
+          "</button>"
+        ).join("");
+      }
+
+      function addCurrentWalletToWatchlist() {
+        const wallet = document.getElementById("wallet").value.trim();
+        if (!wallet) return;
+        const items = getWatchlist();
+        if (items.find((item) => item.address.toLowerCase() === wallet.toLowerCase())) {
+          showStatus("Wallet already exists in watchlist.", "loading");
+          setTimeout(() => showStatus("", ""), 1500);
+          return;
+        }
+        items.unshift({
+          label: "Saved wallet " + (items.length + 1),
+          address: wallet,
+        });
+        saveWatchlist(items.slice(0, 8));
+        renderWatchlist(wallet);
+        showStatus("Wallet saved to watchlist.", "loading");
+        setTimeout(() => showStatus("", ""), 1500);
+      }
+
+      function resetWatchlist() {
+        saveWatchlist(DEFAULT_WATCHLIST);
+        renderWatchlist(document.getElementById("wallet").value.trim());
+        showStatus("Watchlist reset to default examples.", "loading");
+        setTimeout(() => showStatus("", ""), 1500);
+      }
+
+      function getAlertSettings() {
+        try {
+          return { ...DEFAULT_ALERT_SETTINGS, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")) };
+        } catch {
+          return DEFAULT_ALERT_SETTINGS;
+        }
+      }
+
+      function saveAlertSettings() {
+        const settings = {
+          liqThreshold: Number(document.getElementById("setting-liq").value || DEFAULT_ALERT_SETTINGS.liqThreshold),
+          fundingThreshold: Number(document.getElementById("setting-funding").value || DEFAULT_ALERT_SETTINGS.fundingThreshold),
+          riskThreshold: Number(document.getElementById("setting-risk").value || DEFAULT_ALERT_SETTINGS.riskThreshold),
+        };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        return settings;
+      }
+
+      function hydrateAlertSettings() {
+        const settings = getAlertSettings();
+        document.getElementById("setting-liq").value = settings.liqThreshold;
+        document.getElementById("setting-funding").value = settings.fundingThreshold;
+        document.getElementById("setting-risk").value = settings.riskThreshold;
+        ["setting-liq", "setting-funding", "setting-risk"].forEach((id) => {
+          document.getElementById(id).addEventListener("change", () => {
+            saveAlertSettings();
+            const summaryText = document.getElementById("operator-summary").textContent;
+            if (summaryText && summaryText !== "Loading...") {
+              loadWallet();
+            }
+          });
+        });
+      }
+
       async function loadWallet() {
         const wallet = document.getElementById("wallet").value.trim();
-        const res = await fetch("/api/wallet?address=" + encodeURIComponent(wallet));
-        const data = await res.json();
+        showStatus("Loading wallet summary...", "loading");
+        try {
+          const res = await fetch("/api/wallet?address=" + encodeURIComponent(wallet));
+          if (!res.ok) throw new Error("Request failed");
+          const data = await res.json();
 
-        setText("risk-level", data.risk.level.toUpperCase(), data.risk.level === "critical" || data.risk.level === "high" ? "bad" : data.risk.level === "medium" ? "warn" : "good");
-        setText("risk-score", data.risk.score);
-        setText("risk-asset", data.risk.most_at_risk_asset || "-");
-        setText("cost-driver", data.costs.top_cost_driver);
-        document.getElementById("operator-summary").textContent = data.operator_summary;
-        setText("unrealized-pnl", ${money.toString()}(data.costs.total_unrealized_pnl_usd), data.costs.total_unrealized_pnl_usd >= 0 ? "good" : "bad");
-        setText("funding-drag", ${money.toString()}(data.costs.total_funding_paid_usd), data.costs.total_funding_paid_usd >= 0 ? "good" : "bad");
-        setText("primary-driver", data.attribution.primary_driver);
-        document.getElementById("watch-now").textContent = data.risk.what_to_watch_now;
+          setText("risk-level", data.risk.level.toUpperCase(), data.risk.level === "critical" || data.risk.level === "high" ? "bad" : data.risk.level === "medium" ? "warn" : "good");
+          setText("risk-score", data.risk.score);
+          setText("risk-asset", data.risk.most_at_risk_asset || "-");
+          setText("cost-driver", data.costs.top_cost_driver);
+          document.getElementById("operator-summary").textContent = data.operator_summary;
+          setText("unrealized-pnl", ${money.toString()}(data.costs.total_unrealized_pnl_usd), data.costs.total_unrealized_pnl_usd >= 0 ? "good" : "bad");
+          setText("funding-drag", ${money.toString()}(data.costs.total_funding_paid_usd), data.costs.total_funding_paid_usd >= 0 ? "good" : "bad");
+          setText("primary-driver", data.attribution.primary_driver);
+          document.getElementById("watch-now").textContent = data.risk.what_to_watch_now;
 
-        const tbody = document.getElementById("positions");
-        tbody.innerHTML = "";
-        for (const position of data.positions) {
-          const row = document.createElement("tr");
-          row.innerHTML = "<td>" + position.asset + "</td>" +
-            "<td>" + position.side + "</td>" +
-            "<td>" + ${money.toString()}(position.value_usd) + "</td>" +
-            "<td>" + position.leverage + "x / " + position.margin_mode + "</td>" +
-            "<td>" + ${pct.toString()}(position.liquidation_distance_pct) + "</td>" +
-            "<td class='" + (position.unrealized_pnl_usd >= 0 ? "good" : "bad") + "'>" + ${money.toString()}(position.unrealized_pnl_usd) + "</td>" +
-            "<td class='" + (position.funding_paid_usd >= 0 ? "good" : "bad") + "'>" + ${money.toString()}(position.funding_paid_usd) + "</td>";
-          tbody.appendChild(row);
+          const tbody = document.getElementById("positions");
+          tbody.innerHTML = "";
+          for (const position of data.positions) {
+            const row = document.createElement("tr");
+            row.innerHTML = "<td>" + position.asset + "</td>" +
+              "<td>" + position.side + "</td>" +
+              "<td>" + ${money.toString()}(position.value_usd) + "</td>" +
+              "<td>" + position.leverage + "x / " + position.margin_mode + "</td>" +
+              "<td>" + ${pct.toString()}(position.liquidation_distance_pct) + "</td>" +
+              "<td class='" + (position.unrealized_pnl_usd >= 0 ? "good" : "bad") + "'>" + ${money.toString()}(position.unrealized_pnl_usd) + "</td>" +
+              "<td class='" + (position.funding_paid_usd >= 0 ? "good" : "bad") + "'>" + ${money.toString()}(position.funding_paid_usd) + "</td>";
+            tbody.appendChild(row);
+          }
+
+          renderAlerts(data);
+          renderWatchlist(wallet);
+          showStatus("", "");
+        } catch (error) {
+          showStatus("Could not load wallet summary. Try again or switch to a different wallet.", "error");
         }
-
-        renderAlerts(data);
       }
 
       function renderAlerts(data) {
-        const alerts = ${buildAlertState.toString()}(data);
+        const settings = getAlertSettings();
+        const alerts = [];
+        const positions = data.positions || [];
+        const mostDangerous = [...positions].sort((a, b) => (a.liquidation_distance_pct || 100) - (b.liquidation_distance_pct || 100))[0];
+
+        if (!positions.length) {
+          alerts.push({
+            level: "low",
+            title: "No active perp exposure",
+            body: "This wallet currently has no open positions. Alerting should stay quiet until new exposure appears.",
+          });
+        } else {
+          if ((mostDangerous?.liquidation_distance_pct || 100) <= settings.liqThreshold) {
+            alerts.push({
+              level: "high",
+              title: "Liquidation distance is compressing",
+              body: mostDangerous.asset + " is within " + ${pct.toString()}(mostDangerous.liquidation_distance_pct) + " of its liquidation boundary.",
+            });
+          }
+          if (Math.abs(data.costs.total_funding_paid_usd) >= settings.fundingThreshold) {
+            alerts.push({
+              level: "medium",
+              title: "Funding drag is material",
+              body: "Carry costs have already removed " + ${money.toString()}(Math.abs(data.costs.total_funding_paid_usd)) + " from this wallet's edge.",
+            });
+          }
+          if (data.risk.score >= settings.riskThreshold) {
+            alerts.push({
+              level: "high",
+              title: "Risk score needs operator attention",
+              body: "Current risk score is " + data.risk.score + "/100, driven by leverage concentration and wallet-level exposure.",
+            });
+          }
+        }
+
+        if (!alerts.length) {
+          alerts.push({
+            level: "low",
+            title: "No urgent wallet alerts",
+            body: "Exposure is live, but no immediate risk trigger is firing right now.",
+          });
+        }
+
         const el = document.getElementById("alerts");
         el.innerHTML = alerts.map((alert) =>
           "<div class='alert-card " + alert.level + "'>" +
@@ -784,24 +1024,36 @@ function html() {
       async function loadCompare() {
         const a = document.getElementById("compare-a").value.trim();
         const b = document.getElementById("compare-b").value.trim();
-        const [ra, rb] = await Promise.all([
-          fetch("/api/wallet?address=" + encodeURIComponent(a)).then(r => r.json()),
-          fetch("/api/wallet?address=" + encodeURIComponent(b)).then(r => r.json()),
-        ]);
+        const summary = document.getElementById("compare-summary");
+        summary.textContent = "Comparing wallets...";
+        try {
+          const [ra, rb] = await Promise.all([
+            fetch("/api/wallet?address=" + encodeURIComponent(a)).then(r => r.json()),
+            fetch("/api/wallet?address=" + encodeURIComponent(b)).then(r => r.json()),
+          ]);
 
-        const render = (label, data) =>
-          "<div class='compare-card'>" +
-            "<h4>" + label + "</h4>" +
-            "<div class='compare-meta'>" +
-              watchButtonHtml("Risk", String(data.risk.score), data.risk.score >= 60 ? "bad" : data.risk.score >= 35 ? "warn" : "good") +
-              watchButtonHtml("At risk", data.risk.most_at_risk_asset || "-", "") +
-              watchButtonHtml("Unrealized", ${money.toString()}(data.costs.total_unrealized_pnl_usd), data.costs.total_unrealized_pnl_usd >= 0 ? "good" : "bad") +
-              watchButtonHtml("Funding", ${money.toString()}(data.costs.total_funding_paid_usd), data.costs.total_funding_paid_usd >= 0 ? "good" : "bad") +
-            "</div>" +
-            "<p class='alert-body' style='margin-top: 14px;'>" + data.operator_summary + "</p>" +
-          "</div>";
+          const render = (label, data) =>
+            "<div class='compare-card'>" +
+              "<h4>" + label + "</h4>" +
+              "<div class='compare-meta'>" +
+                watchButtonHtml("Risk", String(data.risk.score), data.risk.score >= 60 ? "bad" : data.risk.score >= 35 ? "warn" : "good") +
+                watchButtonHtml("At risk", data.risk.most_at_risk_asset || "-", "") +
+                watchButtonHtml("Unrealized", ${money.toString()}(data.costs.total_unrealized_pnl_usd), data.costs.total_unrealized_pnl_usd >= 0 ? "good" : "bad") +
+                watchButtonHtml("Funding", ${money.toString()}(data.costs.total_funding_paid_usd), data.costs.total_funding_paid_usd >= 0 ? "good" : "bad") +
+              "</div>" +
+              "<p class='alert-body' style='margin-top: 14px;'>" + data.operator_summary + "</p>" +
+            "</div>";
 
-        document.getElementById("compare").innerHTML = render("Wallet A", ra) + render("Wallet B", rb);
+          document.getElementById("compare").innerHTML = render("Wallet A", ra) + render("Wallet B", rb);
+          const winner = ra.risk.score >= rb.risk.score ? "Wallet A is riskier right now" : "Wallet B is riskier right now";
+          const fundingLead =
+            Math.abs(ra.costs.total_funding_paid_usd) >= Math.abs(rb.costs.total_funding_paid_usd)
+              ? "Wallet A is bleeding more through funding drag."
+              : "Wallet B is bleeding more through funding drag.";
+          summary.textContent = winner + ". " + fundingLead;
+        } catch (error) {
+          summary.textContent = "Could not compare the two wallets right now.";
+        }
       }
 
       function selectWatch(address) {
@@ -809,6 +1061,8 @@ function html() {
         loadWallet();
       }
 
+      renderWatchlist(DEFAULT_WALLET);
+      hydrateAlertSettings();
       loadWallet();
       loadCompare();
     </script>
