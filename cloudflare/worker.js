@@ -1,5 +1,10 @@
 const DEFAULT_WALLET = "0x3ee505ba316879d246a8fd2b3d7ee63b51b44fab";
 const HL_INFO_URL = "https://api.hyperliquid.xyz/info";
+const WATCHLIST = [
+  { label: "Long concentration", address: "0x3ee505ba316879d246a8fd2b3d7ee63b51b44fab" },
+  { label: "Single-position wallet", address: "0xec326a384ae965647d87e1f85db46d2efa15ae82" },
+  { label: "Risky short demo", address: "0xfe35dfb17f226a61d1f8f318990e6d27944d6002" },
+];
 
 function money(value) {
   return new Intl.NumberFormat("en-US", {
@@ -128,6 +133,60 @@ function buildSummary(wallet, positions) {
     attribution,
     operator_summary: `Risk is ${risk.level.toUpperCase()} (${risk.score}/100). ${risk.top_risk_driver} ${attribution.one_line_summary}`,
   };
+}
+
+function buildAlertState(summary) {
+  const alerts = [];
+  const mostDangerous = [...summary.positions].sort(
+    (a, b) => (a.liquidation_distance_pct ?? 100) - (b.liquidation_distance_pct ?? 100),
+  )[0];
+
+  if (!summary.positions.length) {
+    alerts.push({
+      level: "low",
+      title: "No active perp exposure",
+      body: "This wallet currently has no open positions. Alerting should stay quiet until new exposure appears.",
+    });
+    return alerts;
+  }
+
+  if ((mostDangerous?.liquidation_distance_pct ?? 100) <= 25) {
+    alerts.push({
+      level: "high",
+      title: "Liquidation distance is compressing",
+      body: `${mostDangerous.asset} is within ${pct(
+        mostDangerous.liquidation_distance_pct,
+      )} of its liquidation boundary.`,
+    });
+  }
+
+  if (summary.costs.total_funding_paid_usd < -5000) {
+    alerts.push({
+      level: "medium",
+      title: "Funding drag is material",
+      body: `Carry costs have already removed ${money(
+        Math.abs(summary.costs.total_funding_paid_usd),
+      )} from this wallet's edge.`,
+    });
+  }
+
+  if (summary.risk.score >= 60) {
+    alerts.push({
+      level: "high",
+      title: "Risk score needs operator attention",
+      body: `Current risk score is ${summary.risk.score}/100, driven by leverage concentration and wallet-level exposure.`,
+    });
+  }
+
+  if (!alerts.length) {
+    alerts.push({
+      level: "low",
+      title: "No urgent wallet alerts",
+      body: "Exposure is live, but no immediate risk trigger is firing right now.",
+    });
+  }
+
+  return alerts;
 }
 
 async function getWalletSummary(wallet) {
@@ -278,6 +337,10 @@ function html() {
         gap: 12px;
         margin: 0 0 22px;
       }
+      .input-row.compare {
+        margin-top: 12px;
+        margin-bottom: 26px;
+      }
       input {
         flex: 1;
         background: rgba(255, 250, 244, 0.92);
@@ -298,6 +361,35 @@ function html() {
         font-weight: 700;
         cursor: pointer;
         box-shadow: 0 12px 32px rgba(143, 57, 34, 0.24);
+      }
+      .ghost-btn {
+        background: transparent;
+        color: var(--accent-deep);
+        border: 1px solid rgba(110, 73, 53, 0.18);
+        box-shadow: none;
+      }
+      .watchlist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 0 0 20px;
+      }
+      .watch-chip {
+        border: 1px solid rgba(110, 73, 53, 0.14);
+        background: rgba(255, 248, 239, 0.8);
+        color: var(--accent-deep);
+        padding: 10px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .watch-chip strong {
+        display: block;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 3px;
       }
       .grid {
         display: grid;
@@ -336,8 +428,114 @@ function html() {
         color: #35231a;
         max-width: 960px;
       }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 16px;
+        margin: 18px 0 10px;
+      }
+      .section-head h3 {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+        font-size: 28px;
+        line-height: 1.05;
+      }
+      .section-head p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 700px;
+      }
       .card.note-band {
         background: linear-gradient(135deg, rgba(162, 73, 47, 0.06), rgba(194, 138, 69, 0.08));
+      }
+      .alert-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .alert-card {
+        border-radius: 22px;
+        padding: 18px 18px 16px;
+        border: 1px solid rgba(110, 73, 53, 0.1);
+        background: rgba(255, 248, 239, 0.75);
+      }
+      .alert-card.high { background: rgba(177, 65, 46, 0.08); }
+      .alert-card.medium { background: rgba(185, 122, 45, 0.08); }
+      .alert-card.low { background: rgba(123, 86, 48, 0.05); }
+      .alert-kicker {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .alert-title {
+        margin: 0 0 8px;
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .alert-body {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .compare-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .compare-card {
+        background: rgba(255, 248, 239, 0.72);
+        border: 1px solid rgba(110, 73, 53, 0.12);
+        border-radius: 24px;
+        padding: 18px;
+      }
+      .compare-card h4 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+      .compare-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .compare-pill {
+        padding: 12px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.45);
+        border: 1px solid rgba(110, 73, 53, 0.08);
+      }
+      .compare-pill .k {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 6px;
+      }
+      .compare-pill .v {
+        font-size: 20px;
+        font-weight: 800;
+      }
+      .narrative-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 16px;
+      }
+      .bullet-stack {
+        display: grid;
+        gap: 12px;
+      }
+      .bullet {
+        padding: 16px 18px;
+        border-radius: 20px;
+        border: 1px solid rgba(110, 73, 53, 0.12);
+        background: rgba(255, 248, 239, 0.7);
+      }
+      .bullet strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 15px;
       }
       table {
         width: 100%;
@@ -365,7 +563,10 @@ function html() {
       }
       @media (max-width: 980px) {
         .hero-shell,
-        .grid {
+        .grid,
+        .compare-grid,
+        .narrative-grid,
+        .alert-list {
           grid-template-columns: 1fr 1fr;
         }
         .hero-card {
@@ -374,7 +575,10 @@ function html() {
       }
       @media (max-width: 640px) {
         .hero-shell,
-        .grid {
+        .grid,
+        .compare-grid,
+        .narrative-grid,
+        .alert-list {
           grid-template-columns: 1fr;
         }
         .hero h1 {
@@ -436,6 +640,15 @@ function html() {
         <button onclick="loadWallet()">Inspect wallet</button>
       </div>
 
+      <div class="watchlist">
+        ${WATCHLIST.map(
+          (item) => `<button class="watch-chip" onclick="selectWatch('${item.address}')"><strong>${item.label}</strong>${item.address.slice(
+            0,
+            10,
+          )}...</button>`,
+        ).join("")}
+      </div>
+
       <div class="grid">
         <div class="card"><div class="label">Risk Level</div><div id="risk-level" class="value warn">-</div></div>
         <div class="card"><div class="label">Risk Score</div><div id="risk-score" class="value">-</div></div>
@@ -455,8 +668,69 @@ function html() {
           <div class="footer">This is the Cloudflare-hosted prototype layer for Dexy.</div>
         </div>
       </div>
+
+      <div class="section-head">
+        <h3>Alert State</h3>
+        <p>Not another noisy dashboard. These are the operator-grade reasons this wallet deserves attention right now.</p>
+      </div>
+      <div class="alert-list" id="alerts"></div>
+
+      <div class="section-head">
+        <h3>Wallet Compare</h3>
+        <p>Borrowing the best part of trader explorer products: fast side-by-side context, but tuned for risk and carry instead of voyeuristic PnL scrolling.</p>
+      </div>
+      <div class="input-row compare">
+        <input id="compare-a" value="${WATCHLIST[0].address}" />
+        <input id="compare-b" value="${WATCHLIST[1].address}" />
+        <button class="ghost-btn" onclick="loadCompare()">Compare wallets</button>
+      </div>
+      <div class="compare-grid" id="compare"></div>
+
+      <div class="section-head">
+        <h3>Investor Demo Narrative</h3>
+        <p>The point of Dexy is not “AI explains wallets.” The point is turning public but hard-to-operate Hyperliquid state into a repeatable operator workflow.</p>
+      </div>
+      <div class="narrative-grid">
+        <div class="card">
+          <div class="label">What this page proves</div>
+          <div class="bullet-stack">
+            <div class="bullet">
+              <strong>1. Public wallet data can be made operator-readable.</strong>
+              Dexy compresses leverage, liquidation distance, funding drag, and attribution into one action-first surface.
+            </div>
+            <div class="bullet">
+              <strong>2. The wedge is not alpha, but risk interpretation.</strong>
+              We are not telling users what to buy. We are showing where they can get hurt and what is quietly draining edge.
+            </div>
+            <div class="bullet">
+              <strong>3. The natural next step is workflow.</strong>
+              Once watchlists, compares, and alerts exist, the product can grow into Telegram triggers, API delivery, and later paid operator tooling.
+            </div>
+          </div>
+        </div>
+        <div class="card note-band">
+          <div class="label">Comparable product cues</div>
+          <div class="bullet-stack">
+            <div class="bullet">
+              <strong>Hyperdash</strong>
+              Strong on terminal density and trader exploration. We borrow fast wallet surfacing, but keep the presentation calmer and more thesis-driven.
+            </div>
+            <div class="bullet">
+              <strong>trade[XYZ] Ghost Mode</strong>
+              Great on watchlists and trader observation. We borrow the watchlist behavior, but shift the goal from spectating to triaging risk.
+            </div>
+            <div class="bullet">
+              <strong>Nansen Portfolio</strong>
+              Strong on clean information density. We borrow the “portfolio clarity” instinct, but focus narrowly on perp risk and carry.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <script>
+      function watchButtonHtml(label, value, cls) {
+        return "<div class='compare-pill'><div class='k'>" + label + "</div><div class='v " + (cls || "") + "'>" + value + "</div></div>";
+      }
       function setText(id, value, cls) {
         const el = document.getElementById(id);
         el.textContent = value;
@@ -491,8 +765,52 @@ function html() {
             "<td class='" + (position.funding_paid_usd >= 0 ? "good" : "bad") + "'>" + ${money.toString()}(position.funding_paid_usd) + "</td>";
           tbody.appendChild(row);
         }
+
+        renderAlerts(data);
       }
+
+      function renderAlerts(data) {
+        const alerts = ${buildAlertState.toString()}(data);
+        const el = document.getElementById("alerts");
+        el.innerHTML = alerts.map((alert) =>
+          "<div class='alert-card " + alert.level + "'>" +
+            "<div class='alert-kicker'>" + alert.level + " priority</div>" +
+            "<div class='alert-title'>" + alert.title + "</div>" +
+            "<p class='alert-body'>" + alert.body + "</p>" +
+          "</div>"
+        ).join("");
+      }
+
+      async function loadCompare() {
+        const a = document.getElementById("compare-a").value.trim();
+        const b = document.getElementById("compare-b").value.trim();
+        const [ra, rb] = await Promise.all([
+          fetch("/api/wallet?address=" + encodeURIComponent(a)).then(r => r.json()),
+          fetch("/api/wallet?address=" + encodeURIComponent(b)).then(r => r.json()),
+        ]);
+
+        const render = (label, data) =>
+          "<div class='compare-card'>" +
+            "<h4>" + label + "</h4>" +
+            "<div class='compare-meta'>" +
+              watchButtonHtml("Risk", String(data.risk.score), data.risk.score >= 60 ? "bad" : data.risk.score >= 35 ? "warn" : "good") +
+              watchButtonHtml("At risk", data.risk.most_at_risk_asset || "-", "") +
+              watchButtonHtml("Unrealized", ${money.toString()}(data.costs.total_unrealized_pnl_usd), data.costs.total_unrealized_pnl_usd >= 0 ? "good" : "bad") +
+              watchButtonHtml("Funding", ${money.toString()}(data.costs.total_funding_paid_usd), data.costs.total_funding_paid_usd >= 0 ? "good" : "bad") +
+            "</div>" +
+            "<p class='alert-body' style='margin-top: 14px;'>" + data.operator_summary + "</p>" +
+          "</div>";
+
+        document.getElementById("compare").innerHTML = render("Wallet A", ra) + render("Wallet B", rb);
+      }
+
+      function selectWatch(address) {
+        document.getElementById("wallet").value = address;
+        loadWallet();
+      }
+
       loadWallet();
+      loadCompare();
     </script>
   </body>
 </html>`;
