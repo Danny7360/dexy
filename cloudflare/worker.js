@@ -386,6 +386,11 @@ function html() {
         gap: 10px;
         flex-wrap: wrap;
       }
+      .watchlist-meta {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 0 12px;
+      }
       .watch-chip {
         border: 1px solid rgba(110, 73, 53, 0.14);
         background: rgba(255, 248, 239, 0.8);
@@ -510,6 +515,14 @@ function html() {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 14px;
       }
+      .alert-summary {
+        margin: 0 0 14px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(110, 73, 53, 0.1);
+        background: rgba(255, 248, 239, 0.72);
+        color: var(--muted);
+      }
       .alert-card {
         border-radius: 22px;
         padding: 18px 18px 16px;
@@ -543,6 +556,10 @@ function html() {
       }
       .compare-summary {
         margin-top: 12px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(110, 73, 53, 0.1);
+        background: rgba(255, 248, 239, 0.72);
         color: var(--muted);
         line-height: 1.65;
       }
@@ -712,6 +729,7 @@ function html() {
           <button class="ghost-btn" onclick="resetWatchlist()">Reset defaults</button>
         </div>
       </div>
+      <div class="watchlist-meta" id="watchlist-meta">Loading saved wallets…</div>
       <div class="watchlist" id="watchlist"></div>
 
       <div class="grid">
@@ -738,6 +756,7 @@ function html() {
         <h3>Alert State</h3>
         <p>Not another noisy dashboard. These are the operator-grade reasons this wallet deserves attention right now.</p>
       </div>
+      <div class="alert-summary" id="alert-summary">Loading alert thresholds…</div>
       <div class="card" style="margin-bottom: 14px;">
         <div class="label">Alert Thresholds</div>
         <div class="settings-grid">
@@ -858,7 +877,9 @@ function html() {
 
       function renderWatchlist(activeAddress) {
         const root = document.getElementById("watchlist");
+        const meta = document.getElementById("watchlist-meta");
         const items = getWatchlist();
+        meta.textContent = items.length + " saved wallets ready for operator triage.";
         root.innerHTML = items.map((item, index) =>
           "<button class='watch-chip " + (item.address === activeAddress ? "active" : "") + "' onclick=\"selectWatch('" + item.address + "')\">" +
             "<strong>" + item.label + "</strong>" +
@@ -1012,6 +1033,7 @@ function html() {
         }
 
         const el = document.getElementById("alerts");
+        const summary = document.getElementById("alert-summary");
         el.innerHTML = alerts.map((alert) =>
           "<div class='alert-card " + alert.level + "'>" +
             "<div class='alert-kicker'>" + alert.level + " priority</div>" +
@@ -1019,6 +1041,10 @@ function html() {
             "<p class='alert-body'>" + alert.body + "</p>" +
           "</div>"
         ).join("");
+        const urgentCount = alerts.filter((alert) => alert.level === "high").length;
+        summary.textContent = urgentCount
+          ? urgentCount + " urgent trigger" + (urgentCount > 1 ? "s are" : " is") + " firing under the current wallet thresholds."
+          : "No urgent trigger is firing. Current thresholds are tuned for quieter wallet monitoring.";
       }
 
       async function loadCompare() {
@@ -1050,7 +1076,11 @@ function html() {
             Math.abs(ra.costs.total_funding_paid_usd) >= Math.abs(rb.costs.total_funding_paid_usd)
               ? "Wallet A is bleeding more through funding drag."
               : "Wallet B is bleeding more through funding drag.";
-          summary.textContent = winner + ". " + fundingLead;
+          const attentionLead =
+            (ra.risk.most_at_risk_asset || "-") === (rb.risk.most_at_risk_asset || "-")
+              ? "Both wallets are leaning on the same risk pocket."
+              : "The two wallets are exposed to different pain points.";
+          summary.textContent = winner + ". " + fundingLead + " " + attentionLead;
         } catch (error) {
           summary.textContent = "Could not compare the two wallets right now.";
         }
