@@ -29,6 +29,7 @@ Turn the current strategy/docs repo into a narrow, testable MVP for:
 - funding drag alerts
 - top-risk-position alerts
 - Telegram bot integration
+- webhook command surface for `/wallet` and `/risk`
 
 ### Phase 4: Replay and Explanation
 

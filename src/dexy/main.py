@@ -2,12 +2,14 @@ from fastapi import FastAPI
 
 from dexy.api.routes.health import router as health_router
 from dexy.api.routes.prototype import router as prototype_router
+from dexy.api.routes.telegram import router as telegram_router
 from dexy.api.routes.wallets import router as wallets_router
 from dexy.core.config import settings
 
 app = FastAPI(title=settings.app_name, version="0.1.0")
 app.include_router(health_router)
 app.include_router(prototype_router)
+app.include_router(telegram_router)
 app.include_router(wallets_router)
 
 

@@ -96,6 +96,7 @@ Then open:
 - `http://127.0.0.1:8000/healthz`
 - `http://127.0.0.1:8000/v1/wallets/0xfe35dfb17f226a61d1f8f318990e6d27944d6002/summary`
 - `http://127.0.0.1:8000/prototype`
+- `http://127.0.0.1:8000/v1/telegram/help`
 
 ## Current State
 
@@ -130,3 +131,28 @@ This Worker serves:
 
 - `/` — public prototype UI
 - `/api/wallet?address=...` — wallet summary from Hyperliquid public data
+
+## Telegram Bot MVP
+
+The FastAPI app now includes a minimal Telegram command surface:
+
+- `/v1/telegram/help`
+- `/v1/telegram/webhook`
+
+Supported bot commands:
+
+- `/start`
+- `/help`
+- `/wallet <address>`
+- `/risk <address>`
+- `/watch <address>`
+
+To enable actual Telegram delivery instead of local preview mode, set:
+
+```bash
+export DEXY_TELEGRAM_BOT_TOKEN="your_bot_token"
+export DEXY_TELEGRAM_WEBHOOK_SECRET="shared_secret"
+```
+
+Without a bot token, the webhook still returns the reply payload so local
+development and tests can run without Telegram configured.
