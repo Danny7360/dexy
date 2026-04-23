@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 PositionSide = Literal["long", "short"]
 MarginMode = Literal["cross", "isolated"]
 RiskLevel = Literal["low", "medium", "high", "critical"]
+AlertSeverity = Literal["medium", "high", "critical"]
 
 
 class Position(BaseModel):
@@ -58,3 +59,30 @@ class WalletSummary(BaseModel):
     costs: CostBreakdown
     attribution: AttributionSummary
     operator_summary: str
+
+
+class AlertThresholds(BaseModel):
+    liquidation_distance_pct: float = Field(default=25, gt=0)
+    funding_drag_usd: float = Field(default=5000, gt=0)
+    risk_score: int = Field(default=60, ge=0, le=100)
+
+
+class AlertEvent(BaseModel):
+    wallet_address: str
+    severity: AlertSeverity
+    category: str
+    title: str
+    body: str
+    asset: Optional[str] = None
+
+
+class AlertScanRequest(BaseModel):
+    wallets: List[str]
+    thresholds: AlertThresholds = Field(default_factory=AlertThresholds)
+    telegram_chat_id: Optional[int] = None
+
+
+class AlertScanResponse(BaseModel):
+    wallets_scanned: int
+    triggered_alerts: List[AlertEvent]
+    telegram_delivery: Optional[dict] = None

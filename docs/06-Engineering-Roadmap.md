@@ -30,6 +30,7 @@ Turn the current strategy/docs repo into a narrow, testable MVP for:
 - top-risk-position alerts
 - Telegram bot integration
 - webhook command surface for `/wallet` and `/risk`
+- batch wallet scan API for watchlist-style alerting
 
 ### Phase 4: Replay and Explanation
 

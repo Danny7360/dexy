@@ -3,7 +3,9 @@ from __future__ import annotations
 import re
 from typing import List, Literal, Optional
 
-from dexy.domain.models import Position, WalletSummary
+from typing import Iterable
+
+from dexy.domain.models import AlertEvent, Position, WalletSummary
 
 
 CommandName = Literal["start", "help", "wallet", "risk", "watch", "unknown"]
@@ -97,6 +99,43 @@ def build_watch_placeholder(wallet_address: str) -> str:
             "Persistent Telegram alerts are the next step; this MVP currently supports command-based reads.",
         ]
     )
+
+
+def format_alert_scan_message(alerts: Iterable[AlertEvent], summaries: Iterable[WalletSummary]) -> str:
+    alerts = list(alerts)
+    summaries = list(summaries)
+    if not alerts:
+        return "Dexy scan completed. No alert threshold is firing right now."
+
+    wallet_count = len({alert.wallet_address.lower() for alert in alerts})
+    lines = [
+        f"Dexy alert scan: {len(alerts)} trigger(s) across {wallet_count} wallet(s)",
+        "",
+    ]
+
+    for alert in alerts[:8]:
+        lines.append(
+            f"[{alert.severity.upper()}] {alert.title}\n"
+            f"{alert.wallet_address}\n"
+            f"{alert.body}"
+        )
+        lines.append("")
+
+    if len(alerts) > 8:
+        lines.append(f"...and {len(alerts) - 8} more trigger(s).")
+        lines.append("")
+
+    summary_map = {summary.wallet_address.lower(): summary for summary in summaries}
+    first_wallet = alerts[0].wallet_address.lower()
+    if first_wallet in summary_map:
+        lines.extend(
+            [
+                "Operator summary",
+                summary_map[first_wallet].operator_summary,
+            ]
+        )
+
+    return "\n".join(lines).strip()
 
 
 def _sorted_positions(positions: list[Position]) -> list[Position]:

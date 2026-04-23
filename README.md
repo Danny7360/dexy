@@ -95,6 +95,7 @@ Then open:
 
 - `http://127.0.0.1:8000/healthz`
 - `http://127.0.0.1:8000/v1/wallets/0xfe35dfb17f226a61d1f8f318990e6d27944d6002/summary`
+- `http://127.0.0.1:8000/v1/alerts/scan` (POST)
 - `http://127.0.0.1:8000/prototype`
 - `http://127.0.0.1:8000/v1/telegram/help`
 
@@ -156,3 +157,29 @@ export DEXY_TELEGRAM_WEBHOOK_SECRET="shared_secret"
 
 Without a bot token, the webhook still returns the reply payload so local
 development and tests can run without Telegram configured.
+
+## Alert Scan MVP
+
+The API now includes a threshold-based alert scan endpoint:
+
+- `POST /v1/alerts/scan`
+
+Example payload:
+
+```json
+{
+  "wallets": [
+    "0xfe35dfb17f226a61d1f8f318990e6d27944d6002",
+    "0x3ee505ba316879d246a8fd2b3d7ee63b51b44fab"
+  ],
+  "thresholds": {
+    "liquidation_distance_pct": 25,
+    "funding_drag_usd": 5000,
+    "risk_score": 60
+  }
+}
+```
+
+Optional:
+
+- add `telegram_chat_id` to fan out triggered alerts through the bot client
