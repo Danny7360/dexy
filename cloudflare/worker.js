@@ -960,18 +960,22 @@ function html() {
         const meta = document.getElementById("watchlist-meta");
         const items = getWatchlist();
         meta.textContent = items.length + " saved wallets ready for operator triage.";
-        root.innerHTML = items.map((item, index) =>
-          "<button class='watch-chip " + (item.address === activeAddress ? "active" : "") + "' onclick=\"selectWatch('" + item.address + "')\">" +
-            "<div class='watch-chip-head'>" +
-              "<strong>" + item.label + "</strong>" +
-              "<div class='watch-chip-tools'>" +
-                "<button class='watch-chip-tool' onclick='event.stopPropagation(); renameWatchItem(" + index + ")' title='Rename watchlist item'>✎</button>" +
-                "<button class='watch-chip-tool' onclick='event.stopPropagation(); removeWatchItem(" + index + ")' title='Remove watchlist item'>×</button>" +
-              "</div>" +
-            "</div>" +
-            "<div class='sub'>" + item.address.slice(0, 10) + "...</div>" +
-          "</button>"
-        ).join("");
+        root.innerHTML = items.map((item, index) => {
+          const isActive = item.address === activeAddress ? "active" : "";
+          const safeAddress = JSON.stringify(item.address);
+          return [
+            '<button class="watch-chip ' + isActive + '" onclick="selectWatch(' + safeAddress + ')">',
+              '<div class="watch-chip-head">',
+                '<strong>' + item.label + '</strong>',
+                '<div class="watch-chip-tools">',
+                  '<button class="watch-chip-tool" onclick="event.stopPropagation(); renameWatchItem(' + index + ')" title="Rename watchlist item">✎</button>',
+                  '<button class="watch-chip-tool" onclick="event.stopPropagation(); removeWatchItem(' + index + ')" title="Remove watchlist item">×</button>',
+                '</div>',
+              '</div>',
+              '<div class="sub">' + item.address.slice(0, 10) + '...</div>',
+            '</button>',
+          ].join("");
+        }).join("");
         syncCompareInputs(items);
       }
 
