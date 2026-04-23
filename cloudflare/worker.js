@@ -858,6 +858,7 @@ function html() {
       </div>
     </div>
     <script>
+      const DEFAULT_WALLET = "${DEFAULT_WALLET}";
       const DEFAULT_WATCHLIST = ${JSON.stringify(WATCHLIST)};
       const WATCHLIST_KEY = "dexy.watchlist.v1";
       const SETTINGS_KEY = "dexy.alertSettings.v1";
@@ -889,11 +890,45 @@ function html() {
       }
 
       function getWatchlist() {
+        const normalizeEntry = (item, index) => {
+          if (typeof item === "string") {
+            const address = item.trim();
+            if (!address) return null;
+            return {
+              label: "Saved wallet " + (index + 1),
+              address,
+            };
+          }
+
+          if (!item || typeof item !== "object") return null;
+          const address = String(item.address || item.wallet || "").trim();
+          if (!address) return null;
+          const label = String(item.label || item.name || ("Saved wallet " + (index + 1))).trim();
+          return {
+            label: label || ("Saved wallet " + (index + 1)),
+            address,
+          };
+        };
+
         try {
           const stored = localStorage.getItem(WATCHLIST_KEY);
           if (!stored) return DEFAULT_WATCHLIST;
           const parsed = JSON.parse(stored);
-          return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_WATCHLIST;
+          if (!Array.isArray(parsed) || !parsed.length) return DEFAULT_WATCHLIST;
+
+          const deduped = [];
+          const seen = new Set();
+          parsed.forEach((item, index) => {
+            const normalized = normalizeEntry(item, index);
+            if (!normalized) return;
+            const key = normalized.address.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            deduped.push(normalized);
+          });
+
+          if (!deduped.length) return DEFAULT_WATCHLIST;
+          return deduped.slice(0, 8);
         } catch {
           return DEFAULT_WATCHLIST;
         }
@@ -1010,7 +1045,12 @@ function html() {
 
       function getAlertSettings() {
         try {
-          return { ...DEFAULT_ALERT_SETTINGS, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")) };
+          const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+          return {
+            liqThreshold: Number(parsed?.liqThreshold) > 0 ? Number(parsed.liqThreshold) : DEFAULT_ALERT_SETTINGS.liqThreshold,
+            fundingThreshold: Number(parsed?.fundingThreshold) > 0 ? Number(parsed.fundingThreshold) : DEFAULT_ALERT_SETTINGS.fundingThreshold,
+            riskThreshold: Number(parsed?.riskThreshold) > 0 ? Number(parsed.riskThreshold) : DEFAULT_ALERT_SETTINGS.riskThreshold,
+          };
         } catch {
           return DEFAULT_ALERT_SETTINGS;
         }
@@ -1201,11 +1241,19 @@ export default {
     if (url.pathname === "/api/wallet") {
       const wallet = url.searchParams.get("address") || DEFAULT_WALLET;
       const summary = await getWalletSummary(wallet);
-      return Response.json(summary);
+      return new Response(JSON.stringify(summary), {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
     }
 
     return new Response(html(), {
-      headers: { "content-type": "text/html; charset=utf-8" },
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
     });
   },
 };
