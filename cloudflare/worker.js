@@ -369,9 +369,9 @@ function html() {
         box-shadow: none;
       }
       .watchlist {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
         margin: 0 0 20px;
       }
       .watchlist-toolbar {
@@ -395,11 +395,12 @@ function html() {
         border: 1px solid rgba(110, 73, 53, 0.14);
         background: rgba(255, 248, 239, 0.8);
         color: var(--accent-deep);
-        padding: 10px 12px;
-        border-radius: 999px;
-        font-size: 13px;
-        cursor: pointer;
+        padding: 12px;
+        border-radius: 18px;
         text-align: left;
+        display: grid;
+        gap: 10px;
+        min-height: 88px;
       }
       .watch-chip-head {
         display: flex;
@@ -407,10 +408,21 @@ function html() {
         justify-content: space-between;
         gap: 10px;
       }
+      .watch-chip-select {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        text-align: left;
+        font: inherit;
+      }
       .watch-chip-tools {
         display: flex;
         gap: 6px;
         align-items: center;
+        flex-shrink: 0;
       }
       .watch-chip-tool {
         border: 0;
@@ -433,6 +445,7 @@ function html() {
       .watch-chip .sub {
         color: var(--muted);
         font-size: 12px;
+        word-break: break-all;
       }
       .watch-chip strong {
         display: block;
@@ -441,6 +454,15 @@ function html() {
         text-transform: uppercase;
         color: var(--muted);
         margin-bottom: 3px;
+      }
+      .watch-chip-label {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .watch-chip-address {
+        color: var(--muted);
+        font-size: 12px;
       }
       .watch-chip.active strong {
         color: var(--accent-deep);
@@ -516,6 +538,11 @@ function html() {
       }
       .status-banner.loading {
         display: block;
+        color: var(--accent-deep);
+      }
+      .status-banner.success {
+        display: block;
+        background: rgba(194, 138, 69, 0.10);
         color: var(--accent-deep);
       }
       .card.note-band {
@@ -964,16 +991,21 @@ function html() {
           const isActive = item.address === activeAddress ? "active" : "";
           const safeAddress = JSON.stringify(item.address);
           return [
-            '<button class="watch-chip ' + isActive + '" onclick="selectWatch(' + safeAddress + ')">',
+            '<div class="watch-chip ' + isActive + '">',
               '<div class="watch-chip-head">',
-                '<strong>' + item.label + '</strong>',
+                '<button class="watch-chip-select" onclick="selectWatch(' + safeAddress + ')">',
+                  '<span class="watch-chip-label">',
+                    '<strong>' + item.label + '</strong>',
+                    '<span class="watch-chip-address">' + item.address.slice(0, 10) + '...</span>',
+                  '</span>',
+                '</button>',
                 '<div class="watch-chip-tools">',
-                  '<button class="watch-chip-tool" onclick="event.stopPropagation(); renameWatchItem(' + index + ')" title="Rename watchlist item">✎</button>',
-                  '<button class="watch-chip-tool" onclick="event.stopPropagation(); removeWatchItem(' + index + ')" title="Remove watchlist item">×</button>',
+                  '<button class="watch-chip-tool" onclick="renameWatchItem(' + index + ')" title="Rename watchlist item">✎</button>',
+                  '<button class="watch-chip-tool" onclick="removeWatchItem(' + index + ')" title="Remove watchlist item">×</button>',
                 '</div>',
               '</div>',
-              '<div class="sub">' + item.address.slice(0, 10) + '...</div>',
-            '</button>',
+              '<div class="sub">Tap the label to inspect this wallet. Rename or remove without leaving the current view.</div>',
+            '</div>',
           ].join("");
         }).join("");
         syncCompareInputs(items);
@@ -994,7 +1026,7 @@ function html() {
         });
         saveWatchlist(items.slice(0, 8));
         renderWatchlist(wallet);
-        showStatus("Wallet saved to watchlist.", "loading");
+        showStatus("Wallet saved to watchlist.", "success");
         setTimeout(() => showStatus("", ""), 1500);
       }
 
@@ -1007,7 +1039,7 @@ function html() {
         current.label = nextLabel.trim() || current.label;
         saveWatchlist(items);
         renderWatchlist(document.getElementById("wallet").value.trim());
-        showStatus("Watchlist label updated.", "loading");
+        showStatus("Watchlist label updated.", "success");
         setTimeout(() => showStatus("", ""), 1200);
       }
 
@@ -1035,7 +1067,7 @@ function html() {
         } else {
           loadCompare();
         }
-        showStatus("Wallet removed from watchlist.", "loading");
+        showStatus("Wallet removed from watchlist.", "success");
         setTimeout(() => showStatus("", ""), 1200);
       }
 
@@ -1043,7 +1075,7 @@ function html() {
         saveWatchlist(DEFAULT_WATCHLIST);
         renderWatchlist(document.getElementById("wallet").value.trim() || DEFAULT_WALLET);
         loadCompare();
-        showStatus("Watchlist reset to default examples.", "loading");
+        showStatus("Watchlist reset to default examples.", "success");
         setTimeout(() => showStatus("", ""), 1500);
       }
 
