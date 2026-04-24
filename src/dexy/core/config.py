@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     telegram_bot_token: Optional[str] = None
     telegram_api_base: str = "https://api.telegram.org"
     telegram_webhook_secret: Optional[str] = None
+    subscriptions_db_path: str = "data/dexy.sqlite3"
 
     model_config = SettingsConfigDict(env_prefix="DEXY_", env_file=".env", extra="ignore")
 

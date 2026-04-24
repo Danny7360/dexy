@@ -147,6 +147,7 @@ Supported bot commands:
 - `/wallet <address>`
 - `/risk <address>`
 - `/watch <address>`
+- `/unwatch <address>`
 
 To enable actual Telegram delivery instead of local preview mode, set:
 
@@ -183,3 +184,24 @@ Example payload:
 Optional:
 
 - add `telegram_chat_id` to fan out triggered alerts through the bot client
+
+## Persistent Watch Subscriptions
+
+Dexy now supports a minimal persistent Telegram watchlist backed by SQLite.
+
+Storage:
+
+- `DEXY_SUBSCRIPTIONS_DB_PATH` (default: `data/dexy.sqlite3`)
+
+Routes:
+
+- `GET /v1/alerts/subscriptions?chat_id=123456`
+- `POST /v1/alerts/subscriptions`
+- `DELETE /v1/alerts/subscriptions?chat_id=123456&wallet_address=0x...`
+- `POST /v1/alerts/subscriptions/run`
+
+Telegram behavior:
+
+- `/watch <address>` saves the wallet for that Telegram chat
+- `/unwatch <address>` removes it
+- `POST /v1/alerts/subscriptions/run` scans all saved subscriptions and pushes alerts through the bot client when configured

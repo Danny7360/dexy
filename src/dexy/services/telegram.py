@@ -8,7 +8,7 @@ from typing import Iterable
 from dexy.domain.models import AlertEvent, Position, WalletSummary
 
 
-CommandName = Literal["start", "help", "wallet", "risk", "watch", "unknown"]
+CommandName = Literal["start", "help", "wallet", "risk", "watch", "unwatch", "unknown"]
 
 ADDRESS_PATTERN = re.compile(r"0x[a-fA-F0-9]{40}")
 
@@ -28,6 +28,7 @@ def parse_command(text: str) -> tuple[CommandName, list[str]]:
         "/wallet": "wallet",
         "/risk": "risk",
         "/watch": "watch",
+        "/unwatch": "unwatch",
     }
     return mapping.get(command, "unknown"), args
 
@@ -46,7 +47,8 @@ def build_help_message() -> str:
             "",
             "/wallet <address>  Full wallet risk + carry readout",
             "/risk <address>    Compact risk triage summary",
-            "/watch <address>   Watchlist command placeholder",
+            "/watch <address>   Persist this wallet for alert scans",
+            "/unwatch <address> Remove this wallet from Telegram watchlist",
             "/help              Show commands",
             "",
             "Example:",
@@ -99,6 +101,22 @@ def build_watch_placeholder(wallet_address: str) -> str:
             "Persistent Telegram alerts are the next step; this MVP currently supports command-based reads.",
         ]
     )
+
+
+def build_watch_saved_message(wallet_address: str, total_watched: int) -> str:
+    return "\n".join(
+        [
+            f"Dexy is now watching {wallet_address}.",
+            f"Saved wallets for this chat: {total_watched}",
+            "This wallet will be included in scheduled alert scans.",
+        ]
+    )
+
+
+def build_unwatch_message(wallet_address: str, removed: bool) -> str:
+    if removed:
+        return f"Dexy stopped watching {wallet_address}."
+    return f"{wallet_address} was not in this chat's saved watchlist."
 
 
 def format_alert_scan_message(alerts: Iterable[AlertEvent], summaries: Iterable[WalletSummary]) -> str:

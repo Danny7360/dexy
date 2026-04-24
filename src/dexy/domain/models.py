@@ -86,3 +86,28 @@ class AlertScanResponse(BaseModel):
     wallets_scanned: int
     triggered_alerts: List[AlertEvent]
     telegram_delivery: Optional[dict] = None
+
+
+class WatchSubscription(BaseModel):
+    chat_id: int
+    wallet_address: str
+    label: Optional[str] = None
+    thresholds: AlertThresholds = Field(default_factory=AlertThresholds)
+
+
+class WatchSubscriptionCreate(BaseModel):
+    chat_id: int
+    wallet_address: str
+    label: Optional[str] = None
+    thresholds: AlertThresholds = Field(default_factory=AlertThresholds)
+
+
+class WatchSubscriptionDelete(BaseModel):
+    chat_id: int
+    wallet_address: str
+
+
+class SubscriptionRunResponse(BaseModel):
+    subscriptions_scanned: int
+    triggered_alerts: List[AlertEvent]
+    telegram_deliveries: int

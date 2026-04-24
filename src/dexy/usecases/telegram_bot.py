@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+from dexy.adapters.subscriptions import WatchSubscriptionRepository
 from dexy.adapters.telegram import TelegramBotClient
+from dexy.domain.models import WatchSubscription
 from dexy.services.telegram import (
     build_help_message,
-    build_watch_placeholder,
+    build_unwatch_message,
+    build_watch_saved_message,
     extract_wallet_argument,
     format_risk_summary,
     format_wallet_summary,
@@ -19,9 +22,11 @@ class TelegramBotUseCase:
         self,
         wallet_usecase: Optional[WalletSummaryUseCase] = None,
         telegram_client: Optional[TelegramBotClient] = None,
+        subscription_repository: Optional[WatchSubscriptionRepository] = None,
     ) -> None:
         self.wallet_usecase = wallet_usecase or WalletSummaryUseCase()
         self.telegram_client = telegram_client or TelegramBotClient()
+        self.subscription_repository = subscription_repository or WatchSubscriptionRepository()
 
     def handle_update(self, update: Dict[str, Any]) -> Dict[str, Any]:
         message = update.get("message") or {}
@@ -32,11 +37,11 @@ class TelegramBotUseCase:
         if not text or not chat_id:
             return {"ok": True, "handled": False, "reason": "unsupported update payload"}
 
-        reply_text = self.build_reply(text=text)
+        reply_text = self.build_reply(text=text, chat_id=int(chat_id))
         delivery = self.telegram_client.send_message(chat_id=int(chat_id), text=reply_text)
         return {"ok": True, "handled": True, "reply_text": reply_text, "delivery": delivery}
 
-    def build_reply(self, text: str) -> str:
+    def build_reply(self, text: str, chat_id: int) -> str:
         command, args = parse_command(text)
         wallet_address = extract_wallet_argument(args)
 
@@ -60,7 +65,14 @@ class TelegramBotUseCase:
             )
 
         if command == "watch":
-            return build_watch_placeholder(wallet_address)
+            subscription = WatchSubscription(chat_id=chat_id, wallet_address=wallet_address)
+            self.subscription_repository.upsert(subscription)
+            total = len(self.subscription_repository.list_by_chat(chat_id))
+            return build_watch_saved_message(wallet_address, total)
+
+        if command == "unwatch":
+            removed = self.subscription_repository.delete(chat_id=chat_id, wallet_address=wallet_address)
+            return build_unwatch_message(wallet_address, removed)
 
         summary = self.wallet_usecase.execute(wallet_address=wallet_address)
 
